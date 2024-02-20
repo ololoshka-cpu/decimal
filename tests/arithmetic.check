@@ -1,0 +1,625 @@
+#include <check.h>
+
+#include "s21_decimal.h"
+
+
+s21_decimal dec1 = {}, dec2 = {}, res  = {}, correct_res = {};
+char res_str[4 * 32 + 1] = {}, correct_res_str[4 * 32 + 1] = {};
+
+
+/********** СЛОЖЕНИЕ **********/ 
+
+// test 1 - когда достаточно увеличения младшей экспаненты
+#test add_1 
+decimal_set(&dec1, 3,         "+ 11101010011000"); // 3 | 15000
+decimal_set(&dec2, 0,         "+ 00000000001111"); // 0 | 15
+decimal_set(&correct_res, 3,  "+ 111010100110000");
+//
+int code = s21_add(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 2 - не получается повысить эспоненту с 0 до 24 (только до 22) -> нужно с с 24 понизить до 22 
+#test add_2
+decimal_set(&dec1, 24,        "+ 110001101000010111111010000100011110000000011110110001101111000000000000010011010010"); // 15,000000000000000000001234 // test 2
+decimal_set(&dec2, 0,         "+ 101101110001101100000"); // | 1500000  // test 2
+decimal_set(&correct_res, 22, "+ 1100000111011111010101010100001110000101100011010101011000001000001001110000000000000000001100");
+//
+int code = s21_add(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 3.1 - простое СЛОЖЕНИЕ двух положительных чисел ПРОСТОЙ СЛУЧАЙ
+#test add_3_1
+decimal_set(&dec1, 3,         "+ 11101010100111"); // 15.015
+decimal_set(&dec2, 0,         "+ 101101110001101100000"); // 1500000
+decimal_set(&correct_res, 3,  "+ 1011001011010000110100110100111");
+//
+int code = s21_add(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+//test 3.2 - простое СЛОЖЕНИЕ двух положительных чисел СЛУЧАЙ С ДЛИННОЙ МАНТИССОЙ - округление в меньшую сторону
+#test add_3_2
+decimal_set(&dec1, 0, "+ 11111111111111111111111111111111 11111111111111111111111111111111 11111111111111111111111111111110"); // MAX - 1
+decimal_set(&dec2, 9, "+ 111010110111100110100010101"); // 0,123456789
+decimal_set(&correct_res, 0,  "+ 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110");
+//
+int code = s21_add(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 3.3 - простое СЛОЖЕНИЕ двух положительных чисел СЛУЧАЙ С ДЛИННОЙ МАНТИССОЙ - округление в большую сторону ОБЫЧНОЕ
+#test add_3_3
+decimal_set(&dec1, 0, "+ 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110"); // MAX - 1
+decimal_set(&dec2, 9, "+ 100101001010010011001000010101"); // 0,623456789
+decimal_set(&correct_res, 0,  "+ 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111");
+//
+int code = s21_add(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 3.4 - простое СЛОЖЕНИЕ двух положительных чисел СЛУЧАЙ С ДЛИННОЙ МАНТИССОЙ - округление в большую сторону БАНКОВСКОЕ
+#test add_3_4
+decimal_set(&dec1, 0, "+ 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111101"); // MAX - 2 (...50333)
+decimal_set(&dec2, 9, "+ 11111001100110101000100010101"); // 0,523456789  
+decimal_set(&correct_res, 0,  "+ 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110");
+//
+int code = s21_add(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+  
+// test 3.4.1 - простое СЛОЖЕНИЕ двух положительных чисел СЛУЧАЙ С ДЛИННОЙ МАНТИССОЙ - округление в большую сторону обычное
+#test add_3_4_1
+decimal_set(&dec1, 0, "+ 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111101"); // MAX - 2 (...50333)
+decimal_set(&dec2, 9, "+ 100101001010010011001000010101"); // 0,623456789  
+decimal_set(&correct_res, 0,  "+ 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110");
+//
+int code = s21_add(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 3.4.2 - простое СЛОЖЕНИЕ двух положительных чисел СЛУЧАЙ С ДЛИННОЙ МАНТИССОЙ - округление в меньшую сторону обычное
+#test add_3_4_2
+decimal_set(&dec1, 0, "+ 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111101"); // MAX - 2 (...50333)
+decimal_set(&dec2, 9, "+ 11001001111010111000000010101"); // 0,423456789  
+decimal_set(&correct_res, 0,  "+ 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111101");
+//
+int code = s21_add(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 3.5 - простое СЛОЖЕНИЕ двух положительных чисел СЛУЧАЙ С ДЛИННОЙ МАНТИССОЙ - округление в большую сторону
+#test add_3_5
+decimal_set(&dec1, 2, "+ 100000000000000000000000000000000000000000000000101110111000000110111011000001000011010011101011"); // 396140812571323749626347655.47
+decimal_set(&dec2, 18, "+ 11111001100110101000100010101"); // 0.000000000523456789
+decimal_set(&correct_res, 2,  "+ 100000000000000000000000000000000000000000000000101110111000000110111011000001000011010011101011");
+//
+int code = s21_add(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 4.1 - сумма: слишком большое число (>= 2^96) (целые числа)
+#test add_4_1
+decimal_set(&dec1, 0, "+ 11111111111111111111111111111111 11111111111111111111111111111111 11111111111111111111111111111110"); // MAX - 1
+decimal_set(&dec2, 0, "+ 11"); // 3
+//
+int code = s21_add(dec1, dec2, &res);
+set_code_to_str(code, res_str);
+ck_assert_pstr_eq(res_str, "TOO_BIG");
+
+// test 4.1 - сумма: слишком большое число (>= 2^96) (целые числа)
+#test add_4_1_2
+decimal_set(&dec1, 0, "- 11111111111111111111111111111111 11111111111111111111111111111111 11111111111111111111111111111110"); // MAX - 1
+decimal_set(&dec2, 0, "- 11"); // 3
+//
+int code = s21_add(dec1, dec2, &res);
+set_code_to_str(code, res_str);
+ck_assert_pstr_eq(res_str, "TOO_SMALL");
+
+
+// test 4.2 - сумма:
+#test add_4_2
+decimal_set(&dec1, 0, "+ 11111111111111111111111111111111 11111111111111111111111111111111 11111111111111111111111111111110"); // MAX - 1
+decimal_set(&dec2, 1, "+ 1000"); // 0.8
+decimal_set(&correct_res, 0,  "+ 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111");
+//
+int code = s21_add(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 5.1 - сумма с разными знаками
+#test add_5_1
+decimal_set(&dec1, 0, "+ 10001010110010011101000000101000011000110111000001011101110"); // 312523541232452334
+decimal_set(&dec2, 0, "- 10000011101000110101000"); // 4313512
+decimal_set(&correct_res, 0,  "+ 10001010110010011101000000101000010110110011011000101000110");
+//
+int code = s21_add(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 5.2 - сумма с разными знаками
+#test add_5_2
+decimal_set(&dec1, 0, "- 10001010110010011101000000101000011000110111000001011101110"); // 312523541232452334
+decimal_set(&dec2, 0, "+ 10000011101000110101000"); // 4313512
+decimal_set(&correct_res, 0,  "- 10001010110010011101000000101000010110110011011000101000110");
+//
+int code = s21_add(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 5.2_2 - сумма с разными знаками
+#test add_5_2_2
+decimal_set(&dec1, 5, "+ 101101110001101100000"); // 15.00000
+decimal_set(&dec2, 5, "+ 1111010000100100000"); // 5.00000
+decimal_set(&correct_res, 5,  "+ 111101000010010000000");
+//
+int code = s21_add(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+
+
+
+/********** ВЫЧИТАНИЕ **********/ 
+
+// test 6.1 - разность с одинаковыми знаками
+#test sub_6_1
+decimal_set(&dec1, 0, "+ 11111111111111111111111111111111 11111111111111111111111111111111 11111111111111111111111111111110"); // MAX - 1
+decimal_set(&dec2, 0, "+ 1000"); // 8
+decimal_set(&correct_res, 0,  "+ 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110110");
+//
+int code = s21_sub(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 6.2 - разность с одинаковыми знаками
+#test sub_6_2
+decimal_set(&dec1, 0, "+ 1000"); // 8
+decimal_set(&dec2, 0, "+ 11111111111111111111111111111111 11111111111111111111111111111111 11111111111111111111111111111110"); // MAX - 1
+decimal_set(&correct_res, 0,  "- 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110110");
+//
+int code = s21_sub(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 6.3 - разность с одинаковыми знаками
+#test sub_6_3
+decimal_set(&dec1, 0, "+ 10001001"); // 137
+decimal_set(&dec2, 0, "+ 11"); // 3
+decimal_set(&correct_res, 0,  "+ 10000110");
+//
+int code = s21_sub(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 6.4 - разность с одинаковыми знаками
+#test sub_6_4
+decimal_set(&dec1, 0, "+ 111010000010001111000111000010111011"); // 62314541243
+decimal_set(&dec2, 0, "+ 10001111011101100"); // 73452
+decimal_set(&correct_res, 0,  "+ 111010000010001110110101000111001111");
+//
+int code = s21_sub(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 6.5 - разность с одинаковыми знаками
+#test sub_6_5
+decimal_set(&dec1, 0, "+ 10001111011101100"); // 73452
+decimal_set(&dec2, 0, "+ 111010000010001111000111000010111011"); // 62314541243
+decimal_set(&correct_res, 0,  "- 111010000010001110110101000111001111");
+//
+int code = s21_sub(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 6.6 - разность с одинаковыми знаками
+#test sub_6_6
+decimal_set(&dec1, 10, "+ 11111111011111111101111111110111 11001111111111111100011111111111 11011110011111100111100001111111 "); // 7907326874259343455.3824475263
+decimal_set(&dec2, 8, "+ 111010000010001111000111000010111011"); // 623.14541243
+decimal_set(&correct_res, 10,  "+ 111111110111111111011111111101111100111111111111110000100101010011111110111000100110111101110011");
+//
+int code = s21_sub(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+// test 6_7 - разность с одинаковыми знаками
+#test sub_6_7
+decimal_set(&dec1, 8, "+ 111010000010001111000111000010111011"); // 623.14541243
+decimal_set(&dec2, 10, "+ 11111111011111111101111111110111 11001111111111111100011111111111 11011110011111100111100001111111 "); // 7907326874259343455.3824475263
+decimal_set(&correct_res, 10,  "- 111111110111111111011111111101111100111111111111110000100101010011111110111000100110111101110011");
+//
+int code = s21_sub(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 7.1_1 - разность с разными знаками
+#test sub_7_1_1
+decimal_set(&dec1, 0, "+ 11111111111111111111111111111111 11111111111111111111111111111111 11111111111111111111111111111110"); // 79228162514264337593543950334
+decimal_set(&dec2, 0, "- 1000"); // -8
+//
+int code = s21_sub(dec1, dec2, &res);
+set_code_to_str(code, res_str);
+ck_assert_pstr_eq(res_str, "TOO_BIG");
+
+// test 7.2_2 - разность с разными знаками
+#test sub_7_2_2
+decimal_set(&dec1, 0, "- 11111111111111111111111111111111 11111111111111111111111111111111 11111111111111111111111111111110"); // -79228162514264337593543950334
+decimal_set(&dec2, 0, "+ 1000"); // 8
+//
+int code = s21_sub(dec1, dec2, &res);
+set_code_to_str(code, res_str);
+ck_assert_pstr_eq(res_str, "TOO_SMALL");
+
+
+
+
+/********** УМНОЖЕНИЕ **********/ 
+
+
+// test 8.1_1 - умножение
+#test mul_8_1_1
+decimal_set(&dec1, 0, "+ 11000010010010"); // 12434
+decimal_set(&dec2, 0, "+ 100111000"); // 312
+decimal_set(&correct_res, 0,  "+ 1110110011000111110000");
+//
+int code = s21_mul(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 8.1_2 - умножение
+#test mul_8_1_2
+decimal_set(&dec1, 0, "- 11000010010010"); // -12434
+decimal_set(&dec2, 0, "+ 100111000"); // 312
+decimal_set(&correct_res, 0,  "- 1110110011000111110000");
+//
+int code = s21_mul(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 8.2 - умножение
+#test mul_8_2
+decimal_set(&dec1, 2, "- 11000010010010"); // -124.34
+decimal_set(&dec2, 4, "- 100111000"); // -0.0312
+decimal_set(&correct_res, 6,  "+ 1110110011000111110000");
+//
+int code = s21_mul(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 8.3 - умножение
+#test mul_8_3
+decimal_set(&dec1, 2, "- 10111100000010000110110001111100111101101111101100001110010"); // -4234124613412353.14
+decimal_set(&dec2, 4, "+ 1010100011010101"); // 4.3221
+decimal_set(&correct_res, 6, "- 11111000000000111111010001101000100011000001110010000000011110011011011010");
+//
+int code = s21_mul(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 8.4_1 - умножение
+#test mul_8_4_1
+decimal_set(&dec1, 0, "- 10111100000010010101010101010000110101010101010110001111100111101101111101100001110010"); // -56830532295949536342825074
+decimal_set(&dec2, 0, "+ 10101000010111010101"); // 689621
+//
+int code = s21_mul(dec1, dec2, &res);
+set_code_to_str(code, res_str);
+ck_assert_pstr_eq(res_str, "TOO_SMALL");
+
+// test 8.4_2 - умножение
+#test mul_8_4_2
+decimal_set(&dec1, 0, "- 10101000010111010101"); // 689621
+decimal_set(&dec2, 0, "- 10111100000010010101010101010000110101010101010110001111100111101101111101100001110010"); // -56830532295949536342825074
+//
+int code = s21_mul(dec1, dec2, &res);
+set_code_to_str(code, res_str);
+ck_assert_pstr_eq(res_str, "TOO_BIG");
+
+
+// test 8.5_1 - умножение
+#test mul_8_5_1
+decimal_set(&dec1, 10, "- 10111100000010010101010101010000110101010101010110001111100111101101111101100001110010"); // -5683053229594953.6342825074
+decimal_set(&dec2, 3, "+ 10101000010111010101"); // 689.621
+decimal_set(&correct_res, 10, "- 11111101010001001111000111110011100111111100110010011101101100101000011110001111010010101110101");
+//
+int code = s21_mul(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+// test 8.5_2 - умножение
+#test mul_8_5_2
+decimal_set(&dec1, 10, "- 10111100000010010101010101010000110101010101010110001111100111101101111101100001110010"); // -5683053229594953.6342825074
+decimal_set(&dec2, 3, "+ 10101000010111010101"); // 689.621
+decimal_set(&correct_res, 10, "- 11111101010001001111000111110011100111111100110010011101101100101000011110001111010010101110101");
+//
+int code = s21_mul(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 8.5_3 - умножение
+#test mul_8_5_3
+decimal_set(&dec1, 10, "+ 10111100000010010101010101010000110101010101010110001111100111101101111101100001110010"); // -5683053229594953.6342825074
+decimal_set(&dec2, 3, "+ 10101000010111010101"); // 689.621
+decimal_set(&correct_res, 10, "+ 11111101010001001111000111110011100111111100110010011101101100101000011110001111010010101110101");
+//
+int code = s21_mul(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+// test 8.5_4 - умножениееа ноль
+#test mul_8_5_4
+decimal_set(&dec1, 0, "+ 0"); // 0
+decimal_set(&dec2, 3, "+ 10101000010111010101"); // 689.621
+decimal_set(&correct_res, 0, "0");
+//
+int code = s21_mul(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+// test 8.5_5 - умножениееа ноль
+#test mul_8_5_5
+decimal_set(&dec1, 3, "+ 10101000010111010101"); // 689.621
+decimal_set(&dec2, 0, "+ 0"); // 0
+decimal_set(&correct_res, 0, "0");
+//
+int code = s21_mul(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+/********** ДЕЛЕНИЕ **********/ 
+
+// test 9.1 - деление целочисленное
+#test del_9_1
+decimal_set(&dec1, 0, "+ 101000"); // 40
+decimal_set(&dec2, 0, "+ 100"); // 4
+decimal_set(&correct_res, 0, "+ 1010");
+//
+int code = s21_div(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 9.1.1 - деление
+#test div_9_1_1
+decimal_set(&dec1, 2, "- 11000010010010"); // -124.34
+decimal_set(&dec2, 4, "- 100111000"); // -0.0312
+decimal_set(&correct_res, 25, "100000001100010101000100101101001111010010110101010010111111000101101100100100000110100100000111");
+//
+int code = s21_div(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 9.2 - деление целочисленное - дробный ответ
+#test div_2
+decimal_set(&dec1, 0, "+ 101010"); // 42
+decimal_set(&dec2, 0, "+ 100"); // 4
+decimal_set(&correct_res, 1, "+ 1101001");
+//
+int code = s21_div(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 9.2 - деление целочисленное - дробный ответ
+#test div_9_2_1
+decimal_set(&dec1, 0, "+ 10"); // 2
+decimal_set(&dec2, 9, "+ 10010100111010100100110011111"); // 0.312297887
+decimal_set(&correct_res, 27, "101001011000101100001110011101110110000110001000100010010110100110001110010010100110011011101"); // 6.404141953096211630788267229
+//
+int code = s21_div(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 9.3 - деление целочисленное - дробный ответ
+#test div_9_3
+decimal_set(&dec1, 0, "- 101001"); // -41
+decimal_set(&dec2, 0, "+ 100"); // 4
+decimal_set(&correct_res, 2, "- 10000000001"); // -10.25
+//
+int code = s21_div(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 9.4 - деление дроби
+#test div_9_4
+decimal_set(&dec1, 1, "- 101001"); // -4.1
+decimal_set(&dec2, 0, "+ 100"); // 4
+decimal_set(&correct_res, 3, "- 10000000001"); // -1.025
+//
+int code = s21_div(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 9.4_1 - деление на дроби
+#test div_9_4_1
+decimal_set(&dec1, 0, "- 101001"); // -41
+decimal_set(&dec2, 1, "+ 100"); // 0.4
+decimal_set(&correct_res, 1, "- 10000000001"); // -102.5
+//
+int code = s21_div(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 9.5 - деление дроби на дробь
+#test div_9_5
+decimal_set(&dec1, 2, "- 101001"); // -0.41
+decimal_set(&dec2, 1, "+ 100"); // 0.4
+decimal_set(&correct_res, 3, "- 10000000001"); // -1.025
+//
+int code = s21_div(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 9.6 - деление дроби на дробь большие
+#test div_9_6
+decimal_set(&dec1, 2, "- 1001010100110100001000010111"); // -1564513.51
+decimal_set(&dec2, 1, "+ 100111000"); // 31.2
+decimal_set(&correct_res, 24, "- 101000100000011010110001100101101000110110000001101001101000110111000101110111010010000011010010"); // -50144.663782051282051282051282
+//
+int code = s21_div(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 9.7 - деление дроби на дробь большие
+#test div_9_7
+decimal_set(&dec1, 1, "+ 100111000"); // 31.2
+decimal_set(&dec2, 2, "- 1001010100110100001000010111"); // -1564513.51
+decimal_set(&correct_res, 28, "- 101010001110101011111001000110100110001000010000010000001110001000001001001110"); // -0.0000199423014250608804266574
+//
+int code = s21_div(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 9.8_1 - деление на ноль
+#test div_9_8_1
+decimal_set(&dec1, 0, "+ 1010"); // 10
+decimal_set(&dec2, 40, "- 0"); // 0
+//
+int code = s21_div(dec1, dec2, &res);
+set_code_to_str(code, res_str);
+ck_assert_pstr_eq(res_str, "DIV_BY_ZERO");
+
+// test 9.8_2 - деление ноля
+#test div_9_8_2
+decimal_set(&dec1, 40, "- 0"); // 0
+decimal_set(&dec2, 0, "+ 1010"); // 10
+decimal_set(&correct_res, 0, "0"); // 0
+//
+int code = s21_div(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 9.9 - деление - получение большого числа
+#test div_9_9
+decimal_set(&dec1, 0, "+ 1010"); // 10
+decimal_set(&dec2, 9, "+ 1"); // 0.000000001
+decimal_set(&correct_res, 0, "1001010100000010111110010000000000"); // 10000000000
+//
+int code = s21_div(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 9.10 - деление - получение большого числа
+#test div_9_10
+decimal_set(&dec1, 0, "+ 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"); // 79228162514264337593543950335
+decimal_set(&dec2, 28, "- 10000001001111110011100101111000111110001001010000001001100001000011111111111111111110000011000"); // 1.9999999999999999999999999000
+decimal_set(&correct_res, 0, "- 100000000000000000000000000000000000000000000000000000000000000000000000000000000000011110111100");
+//
+int code = s21_div(dec1, dec2, &res);
+decimal_to_str(&res, res_str);
+decimal_to_str(&correct_res, correct_res_str);
+ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// test 9.11_1 - деление - переполнение
+#test div_9_11_1
+decimal_set(&dec1, 0, "+ 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"); // 79228162514264337593543950335
+decimal_set(&dec2, 28, "- 1"); // 0.0000000000000000000000000001
+//
+int code = s21_div(dec1, dec2, &res);
+set_code_to_str(code, res_str);
+ck_assert_pstr_eq(res_str, "TOO_SMALL");
+
+
+// test 9.11_2 - деление - переполнение
+#test div_9_11_2
+decimal_set(&dec1, 0, "- 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"); // 79228162514264337593543950335
+decimal_set(&dec2, 28, "- 1"); // 0.0000000000000000000000000001
+//
+int code = s21_div(dec1, dec2, &res);
+set_code_to_str(code, res_str);
+ck_assert_pstr_eq(res_str, "TOO_BIG");
+
+
+
+// #test div_
+
+// decimal_set(&correct_res, , "");
+// //
+// int code = s21_div(dec1, dec2, &res);
+// decimal_to_str(&res, res_str);
+// decimal_to_str(&correct_res, correct_res_str);
+// ck_assert_pstr_eq(res_str, correct_res_str);
+
+
+// #test div_
+
+// //
+// int code = s21_div(dec1, dec2, &res);
+// set_code_to_str(code, res_str);
+// ck_assert_pstr_eq(res_str, "");

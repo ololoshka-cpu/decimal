@@ -1,0 +1,75 @@
+#include "../s21_decimal.h"
+
+// выравние чисел по эскпонентациальной форме записи
+void expanent_alligment(s21_decimal* a, s21_decimal* b) {
+  if (get_exp(a) == get_exp(b)) return;
+
+  s21_decimal *dec_more, *dec_less;
+  int epx_more, exp_less;
+
+  // для удобства установим отдельные указатели
+  if (get_exp(a) > get_exp(b)) {
+    dec_more = a, epx_more = get_exp(a);
+    dec_less = b, exp_less = get_exp(b);
+  } else {
+    dec_more = b, epx_more = get_exp(b);
+    dec_less = a, exp_less = get_exp(a);
+  }
+
+  // пока можем, увеличиваем меньшую экспоненту
+  for (int diff = epx_more - exp_less, status = OK; diff > 0 && status == OK; diff--) {
+    status = multiply_by_10(dec_less); // умножение на 10
+    if (status == OK) set_exp(dec_less, ++exp_less);
+  } 
+
+  // если не сравнялись, то уменьшаем бОльшую экспаненту
+  while (epx_more > exp_less) {
+    // деление на 10
+    long int transfer = 0;
+    for (int i = 2; i >= 0; i--) {
+      // дописываем младший разряд предыдущего bits[i - 1]
+      long int long_int = (dec_more->bits[i] & 0xFFFFFFFF) + transfer; 
+      // запоминаем младший разряд 10-тичного числа и переносим его выше самого старшего разряда int-го числа
+      transfer = ((long_int % 10) & 0xFFFFFFFF) << 32;
+      dec_more->bits[i] = (long_int / 10) & 0xFFFFFFFF; // обрезаем младший разряд (сдвигаем вправо)
+    }
+    set_exp(dec_more, --epx_more);
+  }
+}
+
+// (10 * a)              = (8 * a)  + (2 * a) = 
+// (2^3 * a) + (2^1 * a) = (2 << 3 * a) + (2 << 1 * a)
+// (a << 3) + (a << 1)   = (a << 3)     + (b << 1), где a = b
+int multiply_by_10(s21_decimal* dec) {
+  if ((dec->bits[2] & 0xF0000000) != 0) return 1;
+
+  // a << 3
+  s21_decimal a = *dec;
+  for (int i = 0; i < 3; i++) shift_left(&a);
+
+  // b << 1 (= a << 1)
+  s21_decimal b = *dec;
+  shift_left(&b);
+
+  // a << 3 + b << 1 = 10 * a
+  int bit_overflow = 0;
+  for (int i = 0; i < 95; i++) {
+    int sum = get_bit(&a, i) + get_bit(&b, i) + bit_overflow;
+
+    if (sum == 1 || sum == 3)
+      set_bit(&a, i, 1);
+    else
+      set_bit(&a, i, 0);
+
+    bit_overflow = sum / 2;
+  }
+
+  int owerflow = a.bits[3] & 0x7FFF;
+  int status = 0;
+
+  if (owerflow) status = 1;
+  else
+    *dec = a;
+
+  return status;
+}
